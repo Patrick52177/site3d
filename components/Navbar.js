@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-export default function Navbar({ cartCount, onCartOpen }) {
+export default function Navbar({ cartCount, onCartOpen, onLogoClick, inMenu }) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -29,7 +29,8 @@ export default function Navbar({ cartCount, onCartOpen }) {
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
           {/* Logo */}
           <motion.a
-            href="#"
+            href="/"
+            onClick={onLogoClick ? (e) => { e.preventDefault(); onLogoClick(); } : undefined}
             className="flex items-center gap-3 group"
             whileHover={{ scale: 1.02 }}
           >
