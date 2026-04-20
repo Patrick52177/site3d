@@ -7,16 +7,29 @@ import Menu from "@/components/Menu";
 import Cart from "@/components/Cart";
 import Footer from "@/components/Footer";
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+type View = "hero" | "menu";
+
+// MenuItem from Menu.tsx — no qty, that's added when put in cart
+interface CartItem {
+  id: number;
+  name: string;
+  price: number;
+  emoji: string;
+  badge: string | null;
+  img: string;
+  qty: number;
+}
+
 // ─── WARP SPEED TRANSITION ────────────────────────────────────────────────────
-// CSS-only star streaks drawn on a canvas-like SVG, then a flash
-function WarpTransition({ onComplete }) {
+function WarpTransition({ onComplete }: { onComplete: () => void }) {
   const streakCount = 80;
 
   const streaks = Array.from({ length: streakCount }, (_, i) => {
     const angle = (i / streakCount) * 360;
     const rad = (angle * Math.PI) / 180;
-    const dist = 18 + Math.random() * 42; // % from center
-    const length = 8 + Math.random() * 22; // % length
+    const dist = 18 + Math.random() * 42;
+    const length = 8 + Math.random() * 22;
     const cx = 50 + Math.cos(rad) * dist;
     const cy = 50 + Math.sin(rad) * dist;
     const ex = 50 + Math.cos(rad) * (dist + length);
@@ -27,6 +40,20 @@ function WarpTransition({ onComplete }) {
     return { cx, cy, ex, ey, delay, opacity, width };
   });
 
+  const blueStreaks = Array.from({ length: 30 }, (_, i) => {
+    const angle = (i / 30) * 360 + 6;
+    const rad = (angle * Math.PI) / 180;
+    const dist = 5 + Math.random() * 30;
+    const length = 14 + Math.random() * 28;
+    const cx = 50 + Math.cos(rad) * dist;
+    const cy = 50 + Math.sin(rad) * dist;
+    const ex = 50 + Math.cos(rad) * (dist + length);
+    const ey = 50 + Math.sin(rad) * (dist + length);
+    const delay = 0.05 + Math.random() * 0.2;
+    const opacity = 0.4 + Math.random() * 0.5;
+    return { cx, cy, ex, ey, delay, opacity };
+  });
+
   return (
     <motion.div
       className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden bg-black"
@@ -35,7 +62,6 @@ function WarpTransition({ onComplete }) {
       transition={{ duration: 0.75, times: [0, 0.08, 0.82, 1], ease: "easeInOut" }}
       onAnimationComplete={onComplete}
     >
-      {/* Star streak SVG — lines shoot from centre outward */}
       <motion.svg
         viewBox="0 0 100 100"
         preserveAspectRatio="xMidYMid slice"
@@ -47,74 +73,39 @@ function WarpTransition({ onComplete }) {
         {streaks.map((s, i) => (
           <motion.line
             key={i}
-            x1={s.cx} y1={s.cy}
-            x2={s.cx} y2={s.cy}
+            x1={s.cx} y1={s.cy} x2={s.cx} y2={s.cy}
             stroke="#fbbf24"
             strokeWidth={s.width}
             strokeLinecap="round"
             opacity={0}
-            animate={{
-              x2: [s.cx, s.ex],
-              y2: [s.cy, s.ey],
-              opacity: [0, s.opacity, 0],
-            }}
-            transition={{
-              duration: 0.55,
-              delay: s.delay,
-              ease: [0.2, 0, 0.8, 1],
-            }}
+            animate={{ x2: [s.cx, s.ex], y2: [s.cy, s.ey], opacity: [0, s.opacity, 0] }}
+            transition={{ duration: 0.55, delay: s.delay, ease: [0.2, 0, 0.8, 1] }}
           />
         ))}
-
-        {/* Blue-white streaks mixed in for depth */}
-        {Array.from({ length: 30 }, (_, i) => {
-          const angle = (i / 30) * 360 + 6;
-          const rad = (angle * Math.PI) / 180;
-          const dist = 5 + Math.random() * 30;
-          const length = 14 + Math.random() * 28;
-          const cx = 50 + Math.cos(rad) * dist;
-          const cy = 50 + Math.sin(rad) * dist;
-          const ex = 50 + Math.cos(rad) * (dist + length);
-          const ey = 50 + Math.sin(rad) * (dist + length);
-          return (
-            <motion.line
-              key={`b${i}`}
-              x1={cx} y1={cy} x2={cx} y2={cy}
-              stroke="#e0f0ff"
-              strokeWidth={0.4 + Math.random()}
-              strokeLinecap="round"
-              opacity={0}
-              animate={{
-                x2: [cx, ex],
-                y2: [cy, ey],
-                opacity: [0, 0.4 + Math.random() * 0.5, 0],
-              }}
-              transition={{
-                duration: 0.5,
-                delay: 0.05 + Math.random() * 0.2,
-                ease: [0.2, 0, 0.9, 1],
-              }}
-            />
-          );
-        })}
+        {blueStreaks.map((s, i) => (
+          <motion.line
+            key={`b${i}`}
+            x1={s.cx} y1={s.cy} x2={s.cx} y2={s.cy}
+            stroke="#e0f0ff"
+            strokeWidth={0.4 + Math.random()}
+            strokeLinecap="round"
+            opacity={0}
+            animate={{ x2: [s.cx, s.ex], y2: [s.cy, s.ey], opacity: [0, s.opacity, 0] }}
+            transition={{ duration: 0.5, delay: s.delay, ease: [0.2, 0, 0.9, 1] }}
+          />
+        ))}
       </motion.svg>
 
-      {/* Central tunnel vortex glow */}
       <motion.div
         className="absolute rounded-full"
         style={{
           background: "radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(251,191,36,0.6) 30%, rgba(251,191,36,0.1) 65%, transparent 100%)",
         }}
         initial={{ width: 0, height: 0, opacity: 0 }}
-        animate={{
-          width: ["0px", "60px", "900px"],
-          height: ["0px", "60px", "900px"],
-          opacity: [0, 1, 0],
-        }}
+        animate={{ width: ["0px", "60px", "900px"], height: ["0px", "60px", "900px"], opacity: [0, 1, 0] }}
         transition={{ duration: 0.7, times: [0, 0.25, 1], ease: [0.4, 0, 0.2, 1] }}
       />
 
-      {/* Pure white flash at peak */}
       <motion.div
         className="absolute inset-0 bg-white"
         initial={{ opacity: 0 }}
@@ -125,72 +116,72 @@ function WarpTransition({ onComplete }) {
   );
 }
 
+// ─── Main page ────────────────────────────────────────────────────────────────
 export default function Home() {
-  const [view, setView] = useState("hero");       // "hero" | "menu"
-  const [warping, setWarping] = useState(false);
-  const [targetView, setTargetView] = useState(null);
-  const [cartOpen, setCartOpen] = useState(false);
-  const [cartItems, setCartItems] = useState([]);
-  const [toast, setToast] = useState(null);
-  const cardsRef = useRef(null);
-  const heroScrollRef = useRef(null); // saves hero scroll position
+  const [view, setView] = useState<View>("hero");
+  const [heroKey, setHeroKey] = useState(0);
+  const [warping, setWarping] = useState<boolean>(false);
+  const [targetView, setTargetView] = useState<View | null>(null);
+  const [cartOpen, setCartOpen] = useState<boolean>(false);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [toast, setToast] = useState<string | null>(null);
+  const cardsRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     document.body.style.overflow = cartOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
   }, [cartOpen]);
 
-  // ── Trigger warp then switch view ────────────────────────────────────────
-  const warpTo = useCallback((dest) => {
+  const warpTo = useCallback((dest: View) => {
     if (warping) return;
     setTargetView(dest);
     setWarping(true);
   }, [warping]);
 
   const handleWarpComplete = useCallback(() => {
+    if (!targetView) return;
     setWarping(false);
     setView(targetView);
+    if (targetView === "hero") {
+      setHeroKey(k => k + 1); // force Hero remount → fresh scroll state
+    }
+    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
     if (targetView === "menu") {
-      window.scrollTo({ top: 0, behavior: "instant" });
       setTimeout(() => {
         cardsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 80);
-    } else {
-      window.scrollTo({ top: 0, behavior: "instant" });
     }
     setTargetView(null);
   }, [targetView]);
 
-  // ── Hero scroll reaching end → warp to menu ───────────────────────────────
   const handleEnterMenu = useCallback(() => {
     warpTo("menu");
   }, [warpTo]);
 
-  // ── Menu: when user scrolls to very top (scrollY ~ 0) → warp back ────────
+  // In menu: scroll UP past top → warp back to hero
   useEffect(() => {
     if (view !== "menu") return;
 
-    let lastY = window.scrollY;
-    let topCount = 0; // how many frames we've been at 0
+    let active = false;
+    let fired = false;
+    const enableTimer = setTimeout(() => { active = true; }, 800);
 
-    const onScroll = () => {
-      const currentY = window.scrollY;
-      const goingUp = currentY < lastY;
-      lastY = currentY;
-
-      if (currentY === 0 && goingUp) {
-        topCount++;
-        if (topCount >= 2) warpTo("hero");
-      } else {
-        topCount = 0;
+    const onWheel = (e: WheelEvent) => {
+      if (!active || fired) return;
+      if (window.scrollY === 0 && e.deltaY < 0) {
+        fired = true;
+        warpTo("hero");
       }
     };
 
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    window.addEventListener("wheel", onWheel, { passive: true });
+    return () => {
+      clearTimeout(enableTimer);
+      window.removeEventListener("wheel", onWheel);
+    };
   }, [view, warpTo]);
 
-  const handleAddToCart = (item) => {
+  const handleAddToCart = useCallback((item: Omit<CartItem, "qty">) => {
     setCartItems((prev) => {
       const ex = prev.find((i) => i.id === item.id);
       return ex
@@ -199,15 +190,17 @@ export default function Home() {
     });
     setToast(item.name);
     setTimeout(() => setToast(null), 2600);
-  };
+  }, []);
 
-  const handleUpdateQty = (id, delta) =>
+  const handleUpdateQty = useCallback((id: number, delta: number) => {
     setCartItems((prev) =>
       prev.map((i) => i.id === id ? { ...i, qty: Math.max(1, i.qty + delta) } : i)
     );
+  }, []);
 
-  const handleRemove = (id) =>
+  const handleRemove = useCallback((id: number) => {
     setCartItems((prev) => prev.filter((i) => i.id !== id));
+  }, []);
 
   const cartCount = cartItems.reduce((s, i) => s + i.qty, 0);
 
@@ -232,33 +225,25 @@ export default function Home() {
       <div className="bg-[#050401]">
         <Navbar cartCount={cartCount} onCartOpen={() => setCartOpen(true)} />
 
-        {/* Hero — kept in DOM but hidden during menu to preserve 3D state */}
-        <div style={{ display: view === "hero" ? "block" : "none" }}>
-          <Hero onEnterMenu={handleEnterMenu} />
-        </div>
+        {/* Hero — key forces remount each visit, resetting all scroll state */}
+        {view === "hero" && (
+          <Hero key={heroKey} onEnterMenu={handleEnterMenu} />
+        )}
 
-        {/* Menu */}
         {view === "menu" && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.3 }}
           >
-            <Menu
-              onAddToCart={handleAddToCart}
-              cardsRef={cardsRef}
-            />
+            <Menu onAddToCart={handleAddToCart} cardsRef={cardsRef} />
             <Footer />
           </motion.div>
         )}
 
-        {/* ── Warp transition overlay ── */}
         <AnimatePresence>
           {warping && (
-            <WarpTransition
-              key="warp"
-              onComplete={handleWarpComplete}
-            />
+            <WarpTransition key="warp" onComplete={handleWarpComplete} />
           )}
         </AnimatePresence>
 

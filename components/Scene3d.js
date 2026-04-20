@@ -5,7 +5,6 @@ import {
   Environment,
   MeshReflectorMaterial,
   Sparkles,
-  ContactShadows,
 } from "@react-three/drei";
 import * as THREE from "three";
 
@@ -401,8 +400,8 @@ function SceneLights() {
 export default function Scene3D({ scrollProgress, mouseX, mouseY }) {
   return (
     <Canvas
-      shadows
-      dpr={[1, 1.5]}
+      shadows={{ type: THREE.PCFShadowMap }}
+      dpr={[1, 1.2]}
       camera={{ position: [0, 4, 24], fov: 50, near: 0.1, far: 130 }}
       gl={{
         antialias: true,
@@ -422,7 +421,6 @@ export default function Scene3D({ scrollProgress, mouseX, mouseY }) {
         <Interior />
         <Ground />
         <Atmosphere />
-        <ContactShadows position={[0, 0.02, 7]} opacity={0.5} scale={22} blur={3} far={9} color="#000000" />
       </Suspense>
     </Canvas>
   );

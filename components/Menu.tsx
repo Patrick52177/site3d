@@ -1,10 +1,25 @@
 "use client";
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, RefObject } from "react";
 import { motion, AnimatePresence, useSpring } from "framer-motion";
 
-// ─── Food background images (Unsplash, free) ─────────────────────────────────
-// Each dish has a real food photo URL for the background reveal
-const MENU_DATA = {
+// ─── Types ────────────────────────────────────────────────────────────────────
+interface MenuItem {
+  id: number;
+  name: string;
+  emoji: string;
+  desc: string;
+  price: number;
+  badge: string | null;
+  img: string;
+}
+
+interface MenuProps {
+  onAddToCart: (item: MenuItem) => void;
+  cardsRef?: RefObject<HTMLDivElement | null>;
+}
+
+// ─── Menu data ────────────────────────────────────────────────────────────────
+const MENU_DATA: Record<string, MenuItem[]> = {
   Starters: [
     {
       id: 1, name: "Truffle Arancini", emoji: "🍄",
@@ -67,36 +82,39 @@ const MENU_DATA = {
   ],
 };
 
-// ─── Individual Menu Card ─────────────────────────────────────────────────────
-function MenuCard({ item, onAdd, index, onHover, onLeave }) {
-  const cardRef = useRef(null);
+// ─── Card ─────────────────────────────────────────────────────────────────────
+function MenuCard({
+  item,
+  onAdd,
+  index,
+  onHover,
+  onLeave,
+}: {
+  item: MenuItem;
+  onAdd: (item: MenuItem) => void;
+  index: number;
+  onHover: (item: MenuItem) => void;
+  onLeave: () => void;
+}) {
+  const cardRef = useRef<HTMLDivElement>(null);
   const [added, setAdded] = useState(false);
 
-  // 3D tilt via springs
   const rotX = useSpring(0, { stiffness: 200, damping: 24 });
   const rotY = useSpring(0, { stiffness: 200, damping: 24 });
   const scaleS = useSpring(1, { stiffness: 250, damping: 22 });
 
-  const onMouseMove = (e) => {
+  const onMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!cardRef.current) return;
     const rect = cardRef.current.getBoundingClientRect();
     rotX.set(((e.clientY - rect.top) / rect.height - 0.5) * -12);
     rotY.set(((e.clientX - rect.left) / rect.width - 0.5) * 12);
     scaleS.set(1.025);
   };
 
-  const onMouseEnter = () => {
-    onHover(item);
-    scaleS.set(1.025);
-  };
+  const onMouseEnter = () => { onHover(item); scaleS.set(1.025); };
+  const onMouseLeave = () => { rotX.set(0); rotY.set(0); scaleS.set(1); onLeave(); };
 
-  const onMouseLeave = () => {
-    rotX.set(0);
-    rotY.set(0);
-    scaleS.set(1);
-    onLeave();
-  };
-
-  const handleAdd = (e) => {
+  const handleAdd = (e: React.MouseEvent) => {
     e.stopPropagation();
     onAdd(item);
     setAdded(true);
@@ -109,59 +127,38 @@ function MenuCard({ item, onAdd, index, onHover, onLeave }) {
       onMouseMove={onMouseMove}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
-      style={{
-        rotateX: rotX,
-        rotateY: rotY,
-        scale: scaleS,
-        transformPerspective: 900,
-      }}
-      // ← Slide in from LEFT to RIGHT per card, staggered
+      style={{ rotateX: rotX, rotateY: rotY, scale: scaleS, transformPerspective: 900 }}
       initial={{ opacity: 0, x: -60 }}
       whileInView={{ opacity: 1, x: 0 }}
       viewport={{ once: true, margin: "-40px" }}
-      transition={{
-        duration: 0.7,
-        delay: index * 0.12,
-        ease: [0.22, 1, 0.36, 1],
-      }}
+      transition={{ duration: 0.7, delay: index * 0.12, ease: [0.22, 1, 0.36, 1] }}
       className="group relative cursor-default"
     >
-      {/* Glass card */}
       <div className="relative bg-black/30 hover:bg-black/20 backdrop-blur-md border border-white/8 hover:border-amber-400/25 rounded-2xl p-6 overflow-hidden transition-colors duration-300">
-        {/* Inner shimmer on hover */}
         <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none rounded-2xl"
           style={{ background: "linear-gradient(135deg, rgba(251,191,36,0.04) 0%, transparent 60%)" }} />
 
-        {/* Top badge */}
         {item.badge && (
           <span className="absolute top-4 right-4 text-[8px] tracking-[0.22em] uppercase bg-amber-400/12 text-amber-400 border border-amber-400/22 px-2.5 py-1 rounded-full">
             {item.badge}
           </span>
         )}
 
-        {/* Emoji */}
         <div className="text-4xl mb-4 select-none">{item.emoji}</div>
 
-        {/* Name */}
-        <h3
-          className="text-white mb-2 leading-snug"
-          style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "1.3rem", fontWeight: 400 }}
-        >
+        <h3 className="text-white mb-2 leading-snug"
+          style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "1.3rem", fontWeight: 400 }}>
           {item.name}
         </h3>
 
-        {/* Description */}
         <p className="text-white/38 text-xs leading-relaxed mb-5"
           style={{ fontFamily: "'DM Sans', sans-serif" }}>
           {item.desc}
         </p>
 
-        {/* Price + Add */}
         <div className="flex items-center justify-between">
-          <span
-            className="text-amber-400"
-            style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "1.25rem" }}
-          >
+          <span className="text-amber-400"
+            style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "1.25rem" }}>
             ${item.price}
           </span>
 
@@ -188,37 +185,29 @@ function MenuCard({ item, onAdd, index, onHover, onLeave }) {
           </motion.button>
         </div>
 
-        {/* Bottom glow */}
         <div className="absolute bottom-0 left-8 right-8 h-px bg-gradient-to-r from-transparent via-amber-400/22 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
       </div>
     </motion.div>
   );
 }
 
-// ─── Tab pill selector ────────────────────────────────────────────────────────
-function Tabs({ active, onChange }) {
+// ─── Tabs ─────────────────────────────────────────────────────────────────────
+function Tabs({ active, onChange }: { active: string; onChange: (tab: string) => void }) {
   return (
     <div className="flex justify-center mb-14">
       <div className="inline-flex p-1.5 rounded-full bg-white/[0.04] border border-white/[0.07] backdrop-blur-sm">
         {Object.keys(MENU_DATA).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => onChange(tab)}
+          <button key={tab} onClick={() => onChange(tab)}
             className="relative px-7 py-2.5 rounded-full text-[10px] tracking-[0.22em] uppercase"
-            style={{ fontFamily: "'DM Sans', sans-serif" }}
-          >
+            style={{ fontFamily: "'DM Sans', sans-serif" }}>
             {active === tab && (
-              <motion.div
-                layoutId="menu-pill"
+              <motion.div layoutId="menu-pill"
                 className="absolute inset-0 rounded-full bg-amber-400"
-                transition={{ type: "spring", stiffness: 420, damping: 32 }}
-              />
+                transition={{ type: "spring", stiffness: 420, damping: 32 }} />
             )}
             <span className={`relative z-10 transition-colors duration-200 ${
               active === tab ? "text-black font-semibold" : "text-white/40 hover:text-white/65"
-            }`}>
-              {tab}
-            </span>
+            }`}>{tab}</span>
           </button>
         ))}
       </div>
@@ -226,7 +215,7 @@ function Tabs({ active, onChange }) {
   );
 }
 
-// ─── Section heading ──────────────────────────────────────────────────────────
+// ─── Section intro ────────────────────────────────────────────────────────────
 function SectionIntro() {
   return (
     <motion.div
@@ -244,23 +233,15 @@ function SectionIntro() {
         </span>
         <div className="h-px w-10 bg-amber-400/50" />
       </div>
-      <h2
-        className="text-white leading-none"
-        style={{
-          fontFamily: "'Cormorant Garamond', serif",
-          fontSize: "clamp(3rem, 6vw, 5.5rem)",
-          fontWeight: 300,
-        }}
-      >
+      <h2 className="text-white leading-none"
+        style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(3rem, 6vw, 5.5rem)", fontWeight: 300 }}>
         The{" "}
         <em style={{
           background: "linear-gradient(135deg, #fbbf24 0%, #f97316 100%)",
           WebkitBackgroundClip: "text",
           WebkitTextFillColor: "transparent",
           fontStyle: "italic",
-        }}>
-          Menu
-        </em>
+        }}>Menu</em>
       </h2>
       <p className="text-white/28 text-xs tracking-[0.22em] uppercase mt-4"
         style={{ fontFamily: "'DM Sans', sans-serif" }}>
@@ -305,75 +286,51 @@ function ReservationStrip() {
   );
 }
 
-// ─── Main Menu export ─────────────────────────────────────────────────────────
-export default function Menu({ onAddToCart, cardsRef }) {
+// ─── Main export ──────────────────────────────────────────────────────────────
+export default function Menu({ onAddToCart, cardsRef }: MenuProps) {
   const [activeTab, setActiveTab] = useState("Starters");
-  const [hoveredItem, setHoveredItem] = useState(null);
+  const [hoveredItem, setHoveredItem] = useState<MenuItem | null>(null);
 
-  const handleHover = useCallback((item) => setHoveredItem(item), []);
+  const handleHover = useCallback((item: MenuItem) => setHoveredItem(item), []);
   const handleLeave = useCallback(() => setHoveredItem(null), []);
+  const handleTabChange = (tab: string) => { setHoveredItem(null); setActiveTab(tab); };
 
-  const handleTabChange = (tab) => {
-    setHoveredItem(null);
-    setActiveTab(tab);
-  };
+  const allItems = Object.values(MENU_DATA).flat();
 
   return (
     <section id="menu" className="relative min-h-screen py-36 bg-[#060401] overflow-hidden">
 
-      {/* ══════════════════════════════════════════════════════════════════
-          BACKGROUND IMAGE — switches instantly when card is hovered
-      ══════════════════════════════════════════════════════════════════ */}
+      {/* Background image per hovered card */}
       <div className="absolute inset-0 pointer-events-none">
-        {/* Dark base */}
         <div className="absolute inset-0 bg-[#060401]" />
-
-        {/* Food image crossfade — one per item, only active one is visible */}
-        {Object.values(MENU_DATA).flat().map((item) => (
+        {allItems.map((item) => (
           <motion.div
             key={item.id}
             animate={{ opacity: hoveredItem?.id === item.id ? 1 : 0 }}
             transition={{ duration: 0.22, ease: "easeOut" }}
             className="absolute inset-0"
-            style={{
-              backgroundImage: `url(${item.img})`,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-            }}
+            style={{ backgroundImage: `url(${item.img})`, backgroundSize: "cover", backgroundPosition: "center" }}
           />
         ))}
-
-        {/* Dark overlay so cards stay readable */}
-        <div
-          className="absolute inset-0 transition-opacity duration-300"
+        <div className="absolute inset-0 transition-opacity duration-300"
           style={{
             background: hoveredItem
               ? "linear-gradient(to right, rgba(6,4,1,0.92) 0%, rgba(6,4,1,0.75) 40%, rgba(6,4,1,0.55) 100%)"
               : "rgba(6,4,1,0.0)",
-          }}
-        />
-
-        {/* Vignette always */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background: "radial-gradient(ellipse at 30% 50%, transparent 30%, rgba(6,4,1,0.7) 100%)",
-          }}
-        />
+          }} />
+        <div className="absolute inset-0"
+          style={{ background: "radial-gradient(ellipse at 30% 50%, transparent 30%, rgba(6,4,1,0.7) 100%)" }} />
       </div>
 
-      {/* Top fade */}
       <div className="absolute top-0 inset-x-0 h-40 bg-gradient-to-b from-[#050401] to-transparent pointer-events-none z-10" />
 
-      {/* ── Content ── */}
       <div className="relative z-10 max-w-7xl mx-auto px-6">
         <SectionIntro />
         <Tabs active={activeTab} onChange={handleTabChange} />
 
-        {/* Anchor scrolled to on mount — lands right at the cards */}
+        {/* Anchor scrolled to on mount */}
         <div ref={cardsRef} style={{ scrollMarginTop: "80px" }} />
 
-        {/* Cards grid — animate key change for tab switch */}
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
@@ -396,7 +353,6 @@ export default function Menu({ onAddToCart, cardsRef }) {
           </motion.div>
         </AnimatePresence>
 
-        {/* Hovered dish name watermark */}
         <AnimatePresence>
           {hoveredItem && (
             <motion.div
@@ -408,18 +364,9 @@ export default function Menu({ onAddToCart, cardsRef }) {
               className="fixed right-10 top-1/2 -translate-y-1/2 pointer-events-none z-20 text-right"
             >
               <p className="text-white/12 text-[9px] tracking-[0.4em] uppercase mb-1"
-                style={{ fontFamily: "'DM Sans', sans-serif" }}>
-                Currently viewing
-              </p>
-              <p
-                className="text-white/25"
-                style={{
-                  fontFamily: "'Cormorant Garamond', serif",
-                  fontSize: "clamp(1.8rem, 4vw, 3.5rem)",
-                  fontWeight: 300,
-                  lineHeight: 1.1,
-                }}
-              >
+                style={{ fontFamily: "'DM Sans', sans-serif" }}>Currently viewing</p>
+              <p className="text-white/25"
+                style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(1.8rem, 4vw, 3.5rem)", fontWeight: 300, lineHeight: 1.1 }}>
                 {hoveredItem.name}
               </p>
               <p className="text-amber-400/40 text-sm mt-1"
@@ -433,7 +380,6 @@ export default function Menu({ onAddToCart, cardsRef }) {
         <ReservationStrip />
       </div>
 
-      {/* Bottom fade */}
       <div className="absolute bottom-0 inset-x-0 h-32 bg-gradient-to-t from-[#060401] to-transparent pointer-events-none z-10" />
     </section>
   );

@@ -1,9 +1,9 @@
 "use client";
-import { useRef, useEffect, useCallback, useState } from "react";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { useRef, useEffect, useCallback } from "react";
+import { motion, useScroll, useTransform, useMotionValue, useSpring } from "framer-motion";
 import dynamic from "next/dynamic";
 
-const Scene3D = dynamic(() => import("./Scene3D"), { ssr: false });
+const Scene3D = dynamic(() => import("./Scene3d"), { ssr: false });
 
 const SCROLL_HEIGHT = 6; // 600vh
 
@@ -14,42 +14,56 @@ export default function Hero({ onEnterMenu }) {
   const containerRef = useRef(null);
   const triggered = useRef(false);
 
-  const { scrollYProgress } = useScroll({ target: containerRef });
+  // Use a motion value we control manually — avoids target-ref issues
+  const scrollMV = useMotionValue(0);
 
   useEffect(() => {
-    const unsub = scrollYProgress.on("change", (v) => {
-      scrollProgress.current = v;
-      if (v >= 0.97 && !triggered.current) {
+    const handleScroll = () => {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const containerHeight = containerRef.current.offsetHeight - window.innerHeight;
+      // How far we've scrolled into the container
+      const scrolled = -rect.top;
+      const progress = Math.min(Math.max(scrolled / containerHeight, 0), 1);
+
+      scrollMV.set(progress);
+      scrollProgress.current = progress;
+
+      if (progress >= 0.96 && !triggered.current) {
         triggered.current = true;
         onEnterMenu();
       }
-    });
-    return unsub;
-  }, [scrollYProgress, onEnterMenu]);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    // Run once immediately in case already scrolled
+    handleScroll();
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [onEnterMenu, scrollMV]);
 
   const handleMouseMove = useCallback((e) => {
     mouseX.current = (e.clientX / window.innerWidth - 0.5) * 2;
     mouseY.current = -(e.clientY / window.innerHeight - 0.5) * 2;
   }, []);
 
-  const heroOpacity      = useTransform(scrollYProgress, [0, 0.12, 0.20], [1, 1, 0]);
-  const heroY            = useTransform(scrollYProgress, [0, 0.22], ["0%", "-8%"]);
-  const approachOpacity  = useTransform(scrollYProgress, [0.12, 0.18, 0.32, 0.38], [0, 1, 1, 0]);
-  const enterOpacity     = useTransform(scrollYProgress, [0.32, 0.38, 0.50, 0.56], [0, 1, 1, 0]);
-  const insideOpacity    = useTransform(scrollYProgress, [0.52, 0.58, 0.70, 0.76], [0, 1, 1, 0]);
-  const ctaOpacity       = useTransform(scrollYProgress, [0.82, 0.90], [0, 1]);
-  const ctaY             = useTransform(scrollYProgress, [0.82, 0.90], [24, 0]);
-  const hintOpacity      = useTransform(scrollYProgress, [0, 0.05], [1, 0]);
-  const vignetteOpacity  = useTransform(scrollYProgress, [0.30, 0.42, 0.52, 0.62], [0, 0.85, 0.85, 0]);
-  const blurAmount       = useTransform(scrollYProgress, [0.36, 0.42, 0.48], [0, 7, 0]);
-  const blurFilter       = useTransform(blurAmount, (v) => `blur(${v}px)`);
-  const finalScale       = useTransform(scrollYProgress, [0.88, 1.0], [1, 1.14]);
-  const progressWidth    = useTransform(scrollYProgress, [0, 1], ["0%", "100%"]);
+  const heroOpacity     = useTransform(scrollMV, [0, 0.12, 0.20], [1, 1, 0]);
+  const heroY           = useTransform(scrollMV, [0, 0.22], ["0%", "-8%"]);
+  const approachOpacity = useTransform(scrollMV, [0.12, 0.18, 0.32, 0.38], [0, 1, 1, 0]);
+  const enterOpacity    = useTransform(scrollMV, [0.32, 0.38, 0.50, 0.56], [0, 1, 1, 0]);
+  const insideOpacity   = useTransform(scrollMV, [0.52, 0.58, 0.70, 0.76], [0, 1, 1, 0]);
+  const ctaOpacity      = useTransform(scrollMV, [0.82, 0.90], [0, 1]);
+  const ctaY            = useTransform(scrollMV, [0.82, 0.90], [24, 0]);
+  const hintOpacity     = useTransform(scrollMV, [0, 0.06], [1, 0]);
+  const vignetteOpacity = useTransform(scrollMV, [0.30, 0.42, 0.52, 0.62], [0, 0.85, 0.85, 0]);
+  const blurAmount      = useTransform(scrollMV, [0.36, 0.42, 0.48], [0, 7, 0]);
+  const blurFilter      = useTransform(blurAmount, (v) => `blur(${v}px)`);
+  const finalScale      = useTransform(scrollMV, [0.88, 1.0], [1, 1.14]);
+  const progressWidth   = useTransform(scrollMV, [0, 1], ["0%", "100%"]);
 
   return (
     <div
       ref={containerRef}
-      style={{ height: `${SCROLL_HEIGHT * 100}vh` }}
+      style={{ height: `${SCROLL_HEIGHT * 100}vh`, position: "relative" }}
       className="relative"
       onMouseMove={handleMouseMove}
     >
